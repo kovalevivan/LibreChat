@@ -4,8 +4,33 @@ Deploys LibreChat v0.8.8-rc3 with OpenRouter, local authentication, agents, file
 RAG, experimental schedules, and a separate Code Interpreter v1.4.1 host.
 Application and maintenance-tool images are pinned by digest in `compose.yaml`.
 MongoDB, PostgreSQL/pgvector, and both Redis-compatible stores run in Timeweb DBaaS.
-Application source is unchanged. Future application changes should build a new
-image from this fork and update `LIBRECHAT_IMAGE` after testing.
+The Russian locale covers all English UI keys in this fork. The deployment uses
+`Dockerfile.locale` to rebuild the frontend from the pinned upstream image's own
+source and lockfile, replacing only its Russian translation. The runtime backend
+stays at the pinned version; this avoids mixing newer fork UI code with an older
+backend. The translation retains product names, API identifiers, and native
+language names. The separate admin-panel image is not localized by this build.
+
+## Building the Russian interface
+
+From the repository root, build on the application server (or another Linux
+AMD64 Docker host):
+
+```sh
+docker build -f deploy/artdent/Dockerfile.locale \
+  --build-arg BUILD_COMMIT="$(git rev-parse HEAD)" \
+  -t artdent-librechat:ru-20260922 .
+```
+
+Set `LIBRECHAT_IMAGE=artdent-librechat:ru-20260922` in the deployment's `.env`, then
+run `docker compose up -d --no-deps api`. Keep the previous image and `.env` for
+rollback. To revert only the interface, restore the previous `LIBRECHAT_IMAGE`
+value and recreate `api`; no database restore is needed. Local image tags must
+be rebuilt or transferred when moving the application to a new host.
+
+Locale checks: `npm run test:ci --workspace=@librechat/frontend -- --runInBand
+src/locales/Russian.spec.ts src/locales/Translation.spec.ts`. These check full key
+coverage, interpolation variables, rich-text slots, links and runtime loading.
 
 ## Inventory
 
