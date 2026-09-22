@@ -1,9 +1,11 @@
 import { ThemeSelector } from '@librechat/client';
-import { TStartupConfig } from 'librechat-data-provider';
+import type { TStartupConfig } from 'librechat-data-provider';
+import type { TranslationKeys } from '~/hooks';
 import { ErrorMessage } from '~/components/Auth/ErrorMessage';
-import { TranslationKeys, useLocalize } from '~/hooks';
 import SocialLoginRender from './SocialLoginRender';
 import { BlinkAnimation } from './BlinkAnimation';
+import LoginArtwork from './LoginArtwork';
+import { useLocalize } from '~/hooks';
 import { Banner } from '../Banners';
 import Footer from './Footer';
 
@@ -25,6 +27,7 @@ function AuthLayout({
   error: TranslationKeys | null;
 }) {
   const localize = useLocalize();
+  const isLoginPage = pathname.replace(/^\//, '').replace(/\/$/, '') === 'login';
 
   const hasStartupConfigError = startupConfigError !== null && startupConfigError !== undefined;
   const DisplayError = () => {
@@ -76,8 +79,21 @@ function AuthLayout({
         <ThemeSelector />
       </div>
 
-      <main className="flex flex-grow items-center justify-center">
-        <div className="w-authPageWidth overflow-hidden bg-surface-primary px-6 py-4 sm:max-w-md sm:rounded-lg">
+      <main
+        className={
+          isLoginPage
+            ? 'mx-auto flex w-full max-w-7xl flex-grow items-center justify-center px-4 pb-12 pt-8'
+            : 'flex flex-grow items-center justify-center'
+        }
+      >
+        {isLoginPage && <LoginArtwork side="left" />}
+        <div
+          className={
+            isLoginPage
+              ? 'relative z-10 w-full max-w-sm shrink-0 bg-surface-primary px-6 py-4 sm:rounded-lg lg:-translate-y-20'
+              : 'w-authPageWidth overflow-hidden bg-surface-primary px-6 py-4 sm:max-w-md sm:rounded-lg'
+          }
+        >
           {!hasStartupConfigError && !isFetching && header && (
             <h1
               className="mb-4 text-center text-3xl font-semibold text-text-primary"
@@ -92,6 +108,7 @@ function AuthLayout({
               <SocialLoginRender startupConfig={startupConfig} />
             )}
         </div>
+        {isLoginPage && <LoginArtwork side="right" />}
       </main>
       <Footer startupConfig={startupConfig} />
     </div>

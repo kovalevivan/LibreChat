@@ -33,6 +33,25 @@ Locale checks: `npm run test:ci --workspace=@librechat/frontend -- --runInBand
 src/locales/Russian.spec.ts src/locales/Translation.spec.ts`. These check full key
 coverage, interpolation variables, rich-text slots, links and runtime loading.
 
+### Login artwork
+
+The main `/login` page displays the approved full-length portraits on either side
+of the form at widths of 1024 px and above. The PNGs in
+`client/public/assets/login/` retain their original alpha channels. A responsive
+`picture` uses a transparent inline placeholder on smaller screens, so mobile
+visitors do not download the two desktop images. The portraits are decorative,
+excluded from the accessibility tree, and cannot intercept input. Other
+authentication screens retain their original layouts.
+
+`Dockerfile.locale` includes the two auth components and portrait assets in its
+pinned-source frontend build. The login release uses
+`LIBRECHAT_IMAGE=artdent-librechat:login-20260922`; the preceding
+`artdent-librechat:ru-20260922` image remains available for rollback. Only the API
+container needs recreation to deploy the frontend. No database migration or
+authentication behavior change is involved. Build on the 8 GiB application host
+with `docker build --memory=5g --memory-swap=5g ...` to leave runtime headroom;
+the frontend Node heap is capped at 4 GiB.
+
 ### Russian admin panel
 
 `Dockerfile.admin-locale` rebuilds the admin panel from the exact deployed upstream
