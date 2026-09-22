@@ -39,12 +39,12 @@ Timeweb project: `2950553`, `artdent-ai`, region `ru-1`, zone `spb-3`.
 
 | Resource | ID/address | Configuration |
 | --- | --- | --- |
-| Application | server `9164141`, `188.225.73.127` | 4 × 5 GHz vCPU, 16 GiB RAM, 160 GiB NVMe |
-| Execution | server `9164147`, `188.225.73.95` | 4 × 5 GHz vCPU, 8 GiB RAM, 80 GiB NVMe |
+| Application | server `9164141`, `188.225.73.127` | 2 × 5 GHz vCPU, 8 GiB RAM, 160 GiB NVMe |
+| Execution | server `9164147`, `188.225.73.95` | 2 × 5 GHz vCPU, 4 GiB RAM, 80 GiB NVMe |
 | Private execution API | `10.95.0.2:3112` | WireGuard; application peer `10.95.0.1` |
 | Existing outbound proxy | `72.56.87.18:8888` | tinyproxy, application IPv4 allowlisted |
-| Managed MongoDB 8.0 | cluster `4212335`, `192.168.95.30:27017` | 2 dedicated vCPU, 4 GiB RAM, 40 GiB NVMe |
-| Managed PostgreSQL 15 | cluster `4212337`, `192.168.95.31:5432` | 2 dedicated vCPU, 4 GiB RAM, 40 GiB NVMe; pgvector 0.8.6 |
+| Managed MongoDB 8.0 | cluster `4212335`, `192.168.95.30:27017` | 1 dedicated vCPU, 2 GiB RAM, 40 GiB NVMe |
+| Managed PostgreSQL 15 | cluster `4212337`, `192.168.95.31:5432` | 1 dedicated vCPU, 2 GiB RAM, 40 GiB NVMe; pgvector 0.8.6 |
 | Managed application Valkey 8.1 | cluster `4212339`, `192.168.95.32:6379` | 1 dedicated vCPU, 2 GiB RAM, 20 GiB NVMe |
 | Managed execution Valkey 8.1 | cluster `4212341`, `192.168.95.33:6379` | 1 dedicated vCPU, 2 GiB RAM, 20 GiB NVMe |
 | Main URL | `https://artdent-ai.ru` | Caddy automatic TLS |
@@ -52,12 +52,34 @@ Timeweb project: `2950553`, `artdent-ai`, region `ru-1`, zone `spb-3`.
 | Temporary URL | `https://artdent.188-225-73-127.sslip.io` | Until new domain delegation completes |
 | Temporary administration | `https://artdent-admin.188-225-73-127.sslip.io` | Same administrator account |
 
-Compute estimate: 13,600 RUB/month at provisioning. IPv4, seven daily provider
-backups per disk, and OpenRouter usage are additional. Standard CPU plans returned
-`no_free_node`; these available High CPU configurations were used instead.
-Managed databases add approximately 11,100 RUB/month before backups. General DBaaS
-plans returned `no_free_resources`; dedicated CPU configurator `121` was available.
-These are single-node database deployments, not application-level HA clusters.
+Monthly prices from Timeweb's authenticated `account/services/cost` API on
+2026-09-22, after resizing for 20 employees:
+
+| Resource | Base, RUB/month | IPv4 and billed backups | Total |
+| --- | ---: | ---: | ---: |
+| Application | 5,400 | 200 + 960 | 6,560 |
+| Execution | 3,200 | 200 + 480 | 3,880 |
+| MongoDB | 2,150 | 0 | 2,150 |
+| PostgreSQL | 2,150 | 240 | 2,390 |
+| Application Valkey | 1,850 | 0 | 1,850 |
+| Execution Valkey | 1,850 | 0 | 1,850 |
+| **Project total** | **16,600** | **2,080** | **18,680** |
+
+The previous configuration cost 26,780 RUB/month including those extras; the
+reduction saves 8,100 RUB/month (30.2%). These are full-month rates, not the bill
+for the partially elapsed month. The existing shared overseas proxy costs another
+2,360 RUB/month including its IP and backup; allocating its entire cost to Artdent
+would make the total 21,040 RUB/month. OpenRouter tokens, domain renewal and future
+usage-based storage/traffic charges are separate. The current billing response
+lists a separate DB backup charge only for PostgreSQL; zero means no separate
+charge in that response, not a promise of free backups indefinitely.
+
+Standard CPU plans returned `no_free_node` at provisioning; these available High
+CPU configurations were used instead. General DBaaS plans returned
+`no_free_resources`; dedicated CPU configurator `121` was available. The resize
+retains these CPU families, IPs and disks. Disk shrinking requires a separate
+migration. These are single-node database deployments, not application-level HA
+clusters.
 
 All four databases have no public IP. VPC `artdent-ai-private`
 (`network-0fe44199afd5457b9726525f9b747d11`) uses `192.168.95.0/24`.
@@ -65,10 +87,17 @@ Application private IP is `192.168.95.4`; execution private IP is `192.168.95.20
 The application requires a persistent eth1 configuration for its private address.
 WireGuard remains the transport for the execution API.
 
-Capacity assumes up to 100 registered employees with modest concurrent usage.
-It is not a benchmark of 100 simultaneous model generations. Models run on
+Capacity assumes up to 20 registered employees with modest concurrent usage.
+It is not a benchmark of 20 simultaneous model generations. Models run on
 OpenRouter providers. Code workers admit one Python and one other-language job
-concurrently, with an overall sandbox limit of two.
+concurrently, with an overall sandbox limit of two. The API container allows
+3 GiB (2 GiB Node heap), RAG 1 GiB and the sandbox 2 GiB; Code API's default
+per-job memory limit is 256 MiB. Watch peak RAM and queues as actual usage grows.
+Before resizing, observed host RAM use was approximately 1.5 GiB on the app and
+1.1 GiB on the runner; these idle observations are not a concurrent-load test.
+PostgreSQL uses Timeweb's recommended 2 GiB settings: `shared_buffers=65536`
+(512 MiB in 8 KiB pages), `effective_cache_size=131072` (1 GiB), and
+`maintenance_work_mem=262144` (256 MiB in KiB).
 
 ## Application installation
 
