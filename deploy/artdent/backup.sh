@@ -17,7 +17,8 @@ docker compose exec -T mongodb sh -c \
 docker compose exec -T vectordb sh -c \
   'PGPASSWORD="$POSTGRES_PASSWORD" exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
   > "$destination/postgres.dump"
-for volume in uploads images skills app_data redis_data; do
+# Redis is transient coordination/cache state; don't copy a live AOF during rewrite.
+for volume in uploads images skills app_data; do
   source_path=$(docker volume inspect "artdent-ai_$volume" --format '{{.Mountpoint}}')
   tar -C "$source_path" -czf "$destination/$volume.tar.gz" .
 done

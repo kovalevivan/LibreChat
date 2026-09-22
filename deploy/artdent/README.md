@@ -123,6 +123,7 @@ network/DNS configuration. For selective recovery, use `mongorestore --archive
 file archives and the original encryption keys. Stop application writes while
 switching to the restored data. Rebuild Meilisearch indexes if recovering only
 the logical database dumps; search indexes are not the source of truth.
+Redis coordination/cache state is recreated during a logical recovery.
 
 ## Verification performed
 
