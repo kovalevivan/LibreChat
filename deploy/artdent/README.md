@@ -10,7 +10,7 @@ source and lockfile, replacing its Russian translation and fixing category-label
 localization in the two agent grids. The runtime backend
 stays at the pinned version; this avoids mixing newer fork UI code with an older
 backend. The translation retains product names, API identifiers, and native
-language names. The separate admin-panel image is not localized by this build.
+language names. The separate admin panel uses its own Russian image, described below.
 
 ## Building the Russian interface
 
@@ -32,6 +32,33 @@ be rebuilt or transferred when moving the application to a new host.
 Locale checks: `npm run test:ci --workspace=@librechat/frontend -- --runInBand
 src/locales/Russian.spec.ts src/locales/Translation.spec.ts`. These check full key
 coverage, interpolation variables, rich-text slots, links and runtime loading.
+
+### Russian admin panel
+
+`Dockerfile.admin-locale` rebuilds the admin panel from the exact deployed upstream
+revision `fce9596f823e78f991c7ef60bb97d0ce15d72934`, with a verified source archive
+checksum and its frozen Bun lockfile. The runtime keeps the pinned original image
+and replaces only the compiled application. `admin-localization/ru.json` covers
+all 1,236 upstream strings, with four additional Russian plural forms. The build
+checks coverage, placeholders, numbered rich-text tags, links and TypeScript.
+
+```sh
+docker build -f deploy/artdent/Dockerfile.admin-locale \
+  --build-arg LOCALIZATION_COMMIT="$(git rev-parse HEAD)" \
+  -t artdent-admin:ru-20260922 .
+```
+
+Set `ADMIN_IMAGE=artdent-admin:ru-20260922` in the server's `.env` and run
+`docker compose up -d --no-deps admin-panel`. Keep a copy of `.env` for rollback.
+Restore its previous `ADMIN_IMAGE` and recreate only `admin-panel` to roll back;
+no database changes or restore are involved. Rebuild or transfer the local image
+when replacing the host.
+
+This deployment selects Russian for every administrator, independent of browser
+language or an old i18next language cache. HTML language, page title and displayed
+dates also use Russian. English remains the fallback for any newly added keys.
+Technical identifiers, model names and values entered by administrators are not
+translated. No account roles, permissions or application settings are changed.
 
 ## Inventory
 
