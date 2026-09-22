@@ -55,6 +55,29 @@ authentication behavior change is involved. Build on the 8 GiB application host
 with `docker build --memory=5g --memory-swap=5g ...` to leave runtime headroom;
 the frontend Node heap is capped at 4 GiB.
 
+### Artdent branding
+
+The app and admin panel use the tooth mark from https://artdentnn.ru/favicon.svg.
+`branding/source.svg` preserves the source geometry. The generated variant uses
+`#07515B` for the outline, `#087F8C` for the accent and a `#F1F8F8` backing for
+visibility on both themes. Run `node deploy/artdent/branding/generate.cjs` from the
+repository root after installing dependencies to regenerate the SVG, PNG and
+multi-resolution ICO assets. The maskable icon keeps the tooth inside the central
+80% safe circle and has an opaque background.
+
+Both Dockerfiles include the same generated assets. The main build replaces the
+login logo, browser favicons, Apple touch icon and PWA icons, including legacy
+root URLs. The admin build replaces its bundled sidebar logo, public logo and
+favicon. `branding/prepare.cjs` versions browser and manifest icon URLs without
+changing filesystem globs. Increment its version and matching client references
+when changing the artwork again. Provider and tool logos retain their identities.
+
+The branding release uses `LIBRECHAT_IMAGE=artdent-librechat:brand-20260922` and
+`ADMIN_IMAGE=artdent-admin:brand-20260922`. Build with `LOCALIZATION_COMMIT` set to
+the repository revision, keep the preceding images and `.env`, then recreate only
+`api` and `admin-panel`. Verify both health checks, `/login`, browser/manifest icon
+URLs and the admin sidebar. Restore the previous image variables to roll back.
+
 ### Russian admin panel
 
 `Dockerfile.admin-locale` rebuilds the admin panel from the exact deployed upstream

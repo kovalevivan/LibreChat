@@ -8,6 +8,9 @@ COPY --chown=node:node client/src/locales/ru/translation.json client/src/locales
 COPY --chown=node:node client/src/components/Agents/AgentGrid.tsx client/src/components/Agents/VirtualizedAgentGrid.tsx client/src/components/Agents/
 COPY --chown=node:node client/src/components/Auth/AuthLayout.tsx client/src/components/Auth/LoginArtwork.tsx client/src/components/Auth/
 COPY --chown=node:node client/public/assets/login/ client/public/assets/login/
+COPY --chown=node:node client/public/assets/logo.svg client/public/assets/favicon* client/public/assets/apple-touch-icon-180x180.png client/public/assets/icon-192x192.png client/public/assets/maskable-icon.png client/public/assets/
+COPY deploy/artdent/branding/prepare.cjs /tmp/prepare-branding.cjs
+RUN node /tmp/prepare-branding.cjs
 RUN NODE_OPTIONS=--max-old-space-size=4096 npm run frontend
 
 FROM ${LIBRECHAT_BASE}
@@ -15,5 +18,8 @@ COPY --from=client-build --chown=node:node /app/client/dist /app/client/dist
 COPY --from=client-build --chown=node:node /app/client/src/locales/ru/translation.json /app/client/src/locales/ru/translation.json
 COPY --from=client-build --chown=node:node /app/client/src/components/Agents/AgentGrid.tsx /app/client/src/components/Agents/VirtualizedAgentGrid.tsx /app/client/src/components/Agents/
 COPY --from=client-build --chown=node:node /app/client/src/components/Auth/AuthLayout.tsx /app/client/src/components/Auth/LoginArtwork.tsx /app/client/src/components/Auth/
+COPY --from=client-build --chown=node:node /app/client/public/assets/logo.svg /app/client/public/assets/favicon* /app/client/public/assets/apple-touch-icon-180x180.png /app/client/public/assets/icon-192x192.png /app/client/public/assets/maskable-icon.png /app/client/public/assets/
+COPY --from=client-build --chown=node:node /app/client/public/assets/favicon.ico /app/client/dist/favicon.ico
+COPY --from=client-build --chown=node:node /app/client/public/assets/logo.svg /app/client/dist/favicon.svg
 ARG LOCALIZATION_COMMIT
 LABEL ai.artdent.localization.commit=${LOCALIZATION_COMMIT}
