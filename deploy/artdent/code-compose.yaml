@@ -1,0 +1,314 @@
+services:
+  api:
+    build:
+      context: /opt/artdent-code
+      dockerfile: service/Dockerfile
+      target: api
+      network: host
+    environment:
+      LOCAL_MODE: 'false'
+      CODEAPI_HARDENED_SANDBOX_MODE: 'true'
+      CODEAPI_BRIDGE_TOKEN: ${CODEAPI_BRIDGE_TOKEN:?Set CODEAPI_BRIDGE_TOKEN}
+      CODEAPI_BRIDGE_AUTH_MODE: ${CODEAPI_BRIDGE_AUTH_MODE:-paired}
+      CODEAPI_BRIDGE_DYNAMIC_WORKERS: ${CODEAPI_BRIDGE_DYNAMIC_WORKERS:-true}
+      CODEAPI_BRIDGE_MAX_WORKSPACE_LEASE_SLOTS: ${CODEAPI_BRIDGE_MAX_WORKSPACE_LEASE_SLOTS:-1}
+      CODEAPI_BRIDGE_WORKER_ID: ${CODEAPI_BRIDGE_WORKER_ID:-}
+      CODEAPI_AUTH_PROVIDER: librechat-jwt
+      CODEAPI_ALLOW_AUTH_PROVIDER_NONE: ${CODEAPI_ALLOW_AUTH_PROVIDER_NONE:-}
+      CODEAPI_JWT_ISSUER: ${CODEAPI_JWT_ISSUER:-}
+      CODEAPI_JWT_AUDIENCE: ${CODEAPI_JWT_AUDIENCE:-}
+      CODEAPI_JWT_ALLOWED_ALGS: ${CODEAPI_JWT_ALLOWED_ALGS:-}
+      CODEAPI_JWT_CLOCK_SKEW_SECONDS: ${CODEAPI_JWT_CLOCK_SKEW_SECONDS:-}
+      CODEAPI_JWT_MAX_TTL_SECONDS: ${CODEAPI_JWT_MAX_TTL_SECONDS:-}
+      CODEAPI_JWT_KEY_CACHE_TTL_SECONDS: ${CODEAPI_JWT_KEY_CACHE_TTL_SECONDS:-}
+      CODEAPI_JWT_JWKS_JSON: ${CODEAPI_JWT_JWKS_JSON:?Set CODEAPI_JWT_JWKS_JSON}
+      CODEAPI_JWT_PUBLIC_KEYS_DIR: ${CODEAPI_JWT_PUBLIC_KEYS_DIR:-}
+      CODEAPI_JWT_PUBLIC_KEY: ${CODEAPI_JWT_PUBLIC_KEY:-}
+      CODEAPI_JWT_KID: ${CODEAPI_JWT_KID:-}
+      CODEAPI_JWT_KEY_ID: ${CODEAPI_JWT_KEY_ID:-}
+      CODEAPI_JWT_HS256_KID: ${CODEAPI_JWT_HS256_KID:-}
+      CODEAPI_JWT_HS256_SECRET: ${CODEAPI_JWT_HS256_SECRET:-}
+      CODEAPI_JWT_SINGLE_TENANT_ID: ${CODEAPI_JWT_SINGLE_TENANT_ID:-}
+      CODEAPI_TENANT_ISOLATION_STRICT: ${CODEAPI_TENANT_ISOLATION_STRICT:-}
+      EXECUTION_MANIFEST_TTL_SECONDS: ${EXECUTION_MANIFEST_TTL_SECONDS:-}
+      EXECUTION_MANIFEST_MAX_UPLOAD_BYTES: ${EXECUTION_MANIFEST_MAX_UPLOAD_BYTES:-}
+      EXECUTION_MANIFEST_MAX_OUTPUT_FILES: ${EXECUTION_MANIFEST_MAX_OUTPUT_FILES:-}
+      EXECUTION_MANIFEST_MAX_REQUESTS: ${EXECUTION_MANIFEST_MAX_REQUESTS:-}
+      CODEAPI_HTTP_JSON_LIMIT: ${CODEAPI_HTTP_JSON_LIMIT:-50mb}
+      SERVICE_PORT: '3112'
+      SANDBOX_ENDPOINT: http://sandbox-runner:2000/api/v2
+      EGRESS_GATEWAY_URL: http://egress_gateway:3190
+      FILE_SERVER_URL: http://file_server:3000
+      TOOL_CALL_SERVER_URL: http://tool_call_server:3033
+      CODEAPI_INTERNAL_SERVICE_TOKEN: ${CODEAPI_INTERNAL_SERVICE_TOKEN:?Set CODEAPI_INTERNAL_SERVICE_TOKEN}
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${CODE_REDIS_PASSWORD}
+      CODEAPI_EXECUTION_PROFILE: default
+    depends_on:
+    - redis
+    - tool_call_server
+    image: artdent/code-api:v1.4.1
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    mem_limit: 512m
+    ports:
+    - 10.95.0.2:3112:3112
+  service-worker:
+    build:
+      context: /opt/artdent-code
+      dockerfile: service/Dockerfile
+      target: worker
+      network: host
+    environment:
+      LOCAL_MODE: 'false'
+      CODEAPI_HARDENED_SANDBOX_MODE: 'true'
+      CODEAPI_BRIDGE_TOKEN: ${CODEAPI_BRIDGE_TOKEN:?Set CODEAPI_BRIDGE_TOKEN}
+      CODEAPI_BRIDGE_AUTH_MODE: ${CODEAPI_BRIDGE_AUTH_MODE:-paired}
+      CODEAPI_BRIDGE_DYNAMIC_WORKERS: ${CODEAPI_BRIDGE_DYNAMIC_WORKERS:-true}
+      CODEAPI_BRIDGE_MAX_WORKSPACE_LEASE_SLOTS: ${CODEAPI_BRIDGE_MAX_WORKSPACE_LEASE_SLOTS:-1}
+      CODEAPI_BRIDGE_WORKER_ID: ${CODEAPI_BRIDGE_WORKER_ID:-}
+      CODEAPI_AUTH_PROVIDER: librechat-jwt
+      CODEAPI_JWT_SINGLE_TENANT_ID: ${CODEAPI_JWT_SINGLE_TENANT_ID:-}
+      CODEAPI_TENANT_ISOLATION_STRICT: ${CODEAPI_TENANT_ISOLATION_STRICT:-}
+      CODEAPI_EXECUTION_MANIFEST_PRIVATE_KEY: ${CODEAPI_EXECUTION_MANIFEST_PRIVATE_KEY:?Set
+        CODEAPI_EXECUTION_MANIFEST_PRIVATE_KEY}
+      EXECUTION_MANIFEST_TTL_SECONDS: ${EXECUTION_MANIFEST_TTL_SECONDS:-}
+      EXECUTION_MANIFEST_MAX_UPLOAD_BYTES: ${EXECUTION_MANIFEST_MAX_UPLOAD_BYTES:-}
+      EXECUTION_MANIFEST_MAX_OUTPUT_FILES: ${EXECUTION_MANIFEST_MAX_OUTPUT_FILES:-}
+      EXECUTION_MANIFEST_MAX_REQUESTS: ${EXECUTION_MANIFEST_MAX_REQUESTS:-}
+      SANDBOX_ENDPOINT: http://sandbox-runner:2000/api/v2
+      EGRESS_GATEWAY_URL: http://egress_gateway:3190
+      CODEAPI_INTERNAL_SERVICE_TOKEN: ${CODEAPI_INTERNAL_SERVICE_TOKEN:?Set CODEAPI_INTERNAL_SERVICE_TOKEN}
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${CODE_REDIS_PASSWORD}
+      PYTHON_CONCURRENCY: '1'
+      OTHER_CONCURRENCY: '1'
+      WORKER_HEALTH_PORT: '3113'
+      CODEAPI_EXECUTION_PROFILE: default
+    depends_on:
+      redis:
+        condition: service_started
+      sandbox-runner:
+        condition: service_healthy
+    image: artdent/code-service-worker:v1.4.1
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    mem_limit: 512m
+  egress_gateway:
+    build:
+      context: /opt/artdent-code
+      dockerfile: service/Dockerfile.egress-gateway
+      target: production
+      network: host
+    environment:
+      SERVICE_NAME: egress-gateway
+      CODEAPI_HARDENED_SANDBOX_MODE: 'true'
+      CODEAPI_EGRESS_LEDGER_REQUIRED: ${CODEAPI_EGRESS_LEDGER_REQUIRED:-true}
+      EGRESS_GATEWAY_PORT: '3190'
+      EGRESS_GATEWAY_FILE_SERVER_URL: http://file_server:3000
+      EGRESS_GATEWAY_TOOL_CALL_SERVER_URL: http://tool_call_server:3033
+      EGRESS_GATEWAY_MAX_TOOL_CALL_BYTES: '1048576'
+      CODEAPI_EGRESS_GRANT_SECRET: ${CODEAPI_EGRESS_GRANT_SECRET:?Set CODEAPI_EGRESS_GRANT_SECRET}
+      CODEAPI_INTERNAL_SERVICE_TOKEN: ${CODEAPI_INTERNAL_SERVICE_TOKEN:?Set CODEAPI_INTERNAL_SERVICE_TOKEN}
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${CODE_REDIS_PASSWORD}
+    depends_on:
+    - file_server
+    - tool_call_server
+    - redis
+    image: artdent/code-egress-gateway:v1.4.1
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    mem_limit: 512m
+  tool_call_server:
+    build:
+      context: /opt/artdent-code
+      dockerfile: service/Dockerfile.tool-call-server
+      target: production
+      network: host
+    environment:
+      TOOL_CALL_SERVER_PORT: '3033'
+      TOOL_CALL_REQUEST_TIMEOUT: '300000'
+      TOOL_CALL_SESSION_EXPIRY: '600'
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${CODE_REDIS_PASSWORD}
+      CODEAPI_INTERNAL_SERVICE_TOKEN: ${CODEAPI_INTERNAL_SERVICE_TOKEN:?Set CODEAPI_INTERNAL_SERVICE_TOKEN}
+    depends_on:
+    - redis
+    image: artdent/code-tool-call-server:v1.4.1
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    mem_limit: 512m
+  sandbox-runner:
+    build:
+      context: /opt/artdent-code
+      dockerfile: api/Dockerfile
+      target: sandbox-runner-false
+      network: host
+    restart: unless-stopped
+    privileged: false
+    volumes:
+    - /opt/artdent-code/data/pkgs:/host-packages:ro
+    environment:
+      KVM_ENABLED: 'false'
+      LAUNCHER_PACKAGES_HOST: /disabled-host-packages
+      CODEAPI_HARDENED_SANDBOX_MODE: 'true'
+      EGRESS_GATEWAY_URL: http://egress_gateway:3190
+      SANDBOX_EXECUTE_BODY_LIMIT: ${SANDBOX_EXECUTE_BODY_LIMIT:-50mb}
+      SANDBOX_PACKAGES_DIRECTORY: /pkgs
+      SANDBOX_LOG_LEVEL: INFO
+      SANDBOX_OUTPUT_MAX_SIZE: '65536'
+      SANDBOX_MAX_CONCURRENT_JOBS: '2'
+      SANDBOX_PER_JOB_UIDS: ${SANDBOX_PER_JOB_UIDS:-true}
+      SANDBOX_JOB_UID_BASE: ${SANDBOX_JOB_UID_BASE:-200000}
+      SANDBOX_JOB_GID_BASE: ${SANDBOX_JOB_GID_BASE:-200000}
+      SANDBOX_JOB_UID_COUNT: ${SANDBOX_JOB_UID_COUNT:-}
+      SANDBOX_WORKSPACE_REAPER_MAX_AGE_SECONDS: ${SANDBOX_WORKSPACE_REAPER_MAX_AGE_SECONDS:-3600}
+      SANDBOX_RUN_TIMEOUT: '60000'
+      SANDBOX_RUN_CPU_TIME: '30000'
+      SANDBOX_COMPILE_TIMEOUT: '30000'
+      LAUNCHER_VCPUS: '2'
+      LAUNCHER_RAM_MIB: '2048'
+      LAUNCHER_LOG_LEVEL: '3'
+      SANDBOX_ALLOWED_LOCAL_NETWORK_PORT: '3190'
+      SANDBOX_FORWARD_TARGET: egress_gateway:3190
+      SANDBOX_REQUIRE_EGRESS_MANIFEST: ${SANDBOX_REQUIRE_EGRESS_MANIFEST:-true}
+      SANDBOX_EXECUTION_MANIFEST_PUBLIC_KEY: ${SANDBOX_EXECUTION_MANIFEST_PUBLIC_KEY:?Set
+        SANDBOX_EXECUTION_MANIFEST_PUBLIC_KEY}
+      SANDBOX_RUNNER_CLOCK_SKEW_LIVENESS_LIMIT_SECONDS: ${SANDBOX_RUNNER_CLOCK_SKEW_LIVENESS_LIMIT_SECONDS:-10}
+      SANDBOX_RUNNER_HEALTHCHECK_TIMEOUT_SECONDS: ${SANDBOX_RUNNER_HEALTHCHECK_TIMEOUT_SECONDS:-2}
+    depends_on:
+      egress_gateway:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - /usr/local/bin/node
+      - -e
+      - fetch('http://127.0.0.1:2000/api/v2/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    image: artdent/code-sandbox:v1.4.1
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    mem_limit: 4g
+    pids_limit: 256
+    cap_add:
+    - SYS_ADMIN
+    - SYS_CHROOT
+    - SYS_PTRACE
+    - SETUID
+    - SETGID
+    - NET_ADMIN
+    - DAC_OVERRIDE
+    - DAC_READ_SEARCH
+    - CHOWN
+    - FOWNER
+    - FSETID
+    - KILL
+    - SETFCAP
+    - MKNOD
+    security_opt:
+    - seccomp=unconfined
+    - apparmor=unconfined
+  file_server:
+    build:
+      context: /opt/artdent-code
+      dockerfile: service/Dockerfile
+      target: production
+      network: host
+    environment:
+      MINIO_BUCKET: artdent-code-files
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: '9000'
+      MINIO_USE_SSL: 'false'
+      MINIO_ACCESS_KEY: artdentcode
+      MINIO_SECRET_KEY: ${CODE_MINIO_PASSWORD}
+      FILE_SERVER_PORT: '3000'
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${CODE_REDIS_PASSWORD}
+      CODEAPI_INTERNAL_SERVICE_TOKEN: ${CODEAPI_INTERNAL_SERVICE_TOKEN:?Set CODEAPI_INTERNAL_SERVICE_TOKEN}
+    depends_on:
+    - minio
+    - redis
+    image: artdent/code-file-server:v1.4.1
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    mem_limit: 512m
+  redis:
+    image: redis:7.4.7-alpine
+    command:
+    - sh
+    - -c
+    - exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    environment:
+      REDIS_PASSWORD: ${CODE_REDIS_PASSWORD}
+    mem_limit: 512m
+    volumes:
+    - redis_data:/data
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    volumes:
+    - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: artdentcode
+      MINIO_ROOT_PASSWORD: ${CODE_MINIO_PASSWORD}
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    mem_limit: 768m
+  package-init:
+    profiles:
+    - setup
+    build:
+      context: /opt/artdent-code
+      dockerfile: docker/Dockerfile.package-init
+      network: host
+    image: artdent/code-packages:v1.4.1
+    network_mode: host
+    volumes:
+    - /opt/artdent-code/data/pkgs:/pkgs
+volumes:
+  minio_data: null
+  redis_data: {}
+name: artdent-code

@@ -1,0 +1,12 @@
+[Unit]
+Description=Consistent LibreChat database and file backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/artdent-ai/backup.sh
+TimeoutStartSec=30min
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
