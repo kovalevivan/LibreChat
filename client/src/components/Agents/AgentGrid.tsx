@@ -2,6 +2,7 @@ import React, { useMemo, useEffect } from 'react';
 import { Spinner } from '@librechat/client';
 import { PermissionBits } from 'librechat-data-provider';
 import type t from 'librechat-data-provider';
+import type { TranslationKeys } from '~/hooks';
 import { useMarketplaceAgentsInfiniteQuery } from '~/data-provider/Agents';
 import { useInfiniteScroll } from '~/hooks/useInfiniteScroll';
 import { useAgentCategories, useLocalize } from '~/hooks';
@@ -111,7 +112,9 @@ const AgentGrid: React.FC<AgentGridProps> = ({
   const getCategoryDisplayName = (categoryValue: string) => {
     const categoryData = categories.find((cat) => cat.value === categoryValue);
     if (categoryData) {
-      return categoryData.label;
+      return categoryData.label?.startsWith('com_')
+        ? localize(categoryData.label as TranslationKeys)
+        : categoryData.label;
     }
 
     // Fallback for special categories or unknown categories
@@ -119,7 +122,7 @@ const AgentGrid: React.FC<AgentGridProps> = ({
       return localize('com_agents_top_picks');
     }
     if (categoryValue === 'all') {
-      return 'All';
+      return localize('com_ui_all');
     }
 
     // Simple capitalization for unknown categories

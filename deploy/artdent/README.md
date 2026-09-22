@@ -6,7 +6,8 @@ Application and maintenance-tool images are pinned by digest in `compose.yaml`.
 MongoDB, PostgreSQL/pgvector, and both Redis-compatible stores run in Timeweb DBaaS.
 The Russian locale covers all English UI keys in this fork. The deployment uses
 `Dockerfile.locale` to rebuild the frontend from the pinned upstream image's own
-source and lockfile, replacing only its Russian translation. The runtime backend
+source and lockfile, replacing its Russian translation and fixing category-label
+localization in the two agent grids. The runtime backend
 stays at the pinned version; this avoids mixing newer fork UI code with an older
 backend. The translation retains product names, API identifiers, and native
 language names. The separate admin-panel image is not localized by this build.
