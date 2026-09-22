@@ -42,6 +42,9 @@ of the form at widths of 1024 px and above. The PNGs in
 visitors do not download the two desktop images. The portraits are decorative,
 excluded from the accessibility tree, and cannot intercept input. Other
 authentication screens retain their original layouts.
+The runtime serves the portraits from `dist/assets/login` only. Do not copy that
+directory into the runtime's `public/assets`: its legacy static mount also serves
+the site root, where a `login` directory would redirect the `/login` route.
 
 `Dockerfile.locale` includes the two auth components and portrait assets in its
 pinned-source frontend build. The login release uses

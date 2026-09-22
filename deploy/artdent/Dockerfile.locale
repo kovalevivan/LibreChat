@@ -15,6 +15,5 @@ COPY --from=client-build --chown=node:node /app/client/dist /app/client/dist
 COPY --from=client-build --chown=node:node /app/client/src/locales/ru/translation.json /app/client/src/locales/ru/translation.json
 COPY --from=client-build --chown=node:node /app/client/src/components/Agents/AgentGrid.tsx /app/client/src/components/Agents/VirtualizedAgentGrid.tsx /app/client/src/components/Agents/
 COPY --from=client-build --chown=node:node /app/client/src/components/Auth/AuthLayout.tsx /app/client/src/components/Auth/LoginArtwork.tsx /app/client/src/components/Auth/
-COPY --from=client-build --chown=node:node /app/client/public/assets/login /app/client/public/assets/login
 ARG LOCALIZATION_COMMIT
 LABEL ai.artdent.localization.commit=${LOCALIZATION_COMMIT}
