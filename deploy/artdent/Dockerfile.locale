@@ -12,5 +12,5 @@ FROM ${LIBRECHAT_BASE}
 COPY --from=client-build --chown=node:node /app/client/dist /app/client/dist
 COPY --from=client-build --chown=node:node /app/client/src/locales/ru/translation.json /app/client/src/locales/ru/translation.json
 COPY --from=client-build --chown=node:node /app/client/src/components/Agents/AgentGrid.tsx /app/client/src/components/Agents/VirtualizedAgentGrid.tsx /app/client/src/components/Agents/
-ARG BUILD_COMMIT
-LABEL ai.artdent.localization.commit=${BUILD_COMMIT}
+ARG LOCALIZATION_COMMIT
+LABEL ai.artdent.localization.commit=${LOCALIZATION_COMMIT}

@@ -19,7 +19,7 @@ AMD64 Docker host):
 
 ```sh
 docker build -f deploy/artdent/Dockerfile.locale \
-  --build-arg BUILD_COMMIT="$(git rev-parse HEAD)" \
+  --build-arg LOCALIZATION_COMMIT="$(git rev-parse HEAD)" \
   -t artdent-librechat:ru-20260922 .
 ```
 
