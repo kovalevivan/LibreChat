@@ -11,11 +11,10 @@ restore_services() { docker compose start rag_api api >/dev/null; }
 trap restore_services EXIT
 # Stop application writes so database dumps and file copies describe one state.
 docker compose stop -t 90 api rag_api >/dev/null
-docker compose exec -T mongodb sh -c \
-  'exec mongodump --quiet --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db LibreChat --archive --gzip' \
+docker compose run --rm -T --no-deps mongo-tools sh -c \
+  'exec mongodump --quiet --uri "$MONGO_URI" --db LibreChat --archive --gzip' \
   > "$destination/mongodb.archive.gz"
-docker compose exec -T vectordb sh -c \
-  'PGPASSWORD="$POSTGRES_PASSWORD" exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
+docker compose run --rm -T --no-deps postgres-tools pg_dump -Fc \
   > "$destination/postgres.dump"
 # Redis is transient coordination/cache state; don't copy a live AOF during rewrite.
 for volume in uploads images skills app_data; do

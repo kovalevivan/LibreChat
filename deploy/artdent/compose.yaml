@@ -32,10 +32,10 @@ services:
       PORT: 3080
       NODE_ENV: production
       NODE_OPTIONS: --max-old-space-size=4096
-      MONGO_URI: mongodb://librechat:${MONGO_PASSWORD:?Set MONGO_PASSWORD}@mongodb:27017/LibreChat?authSource=admin
+      MONGO_URI: ${MONGO_URI:?Set managed MONGO_URI}
       MEILI_HOST: http://meilisearch:7700
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?Set MEILI_MASTER_KEY}
-      REDIS_URI: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379
+      REDIS_URI: ${REDIS_URI:?Set managed REDIS_URI}
       USE_REDIS: "true"
       USE_REDIS_STREAMS: "true"
       RAG_API_URL: http://rag_api:8000
@@ -51,10 +51,6 @@ services:
     ports: ["127.0.0.1:3080:3080"]
     mem_limit: 6g
     pids_limit: 512
-    depends_on:
-      mongodb: {condition: service_healthy}
-      redis: {condition: service_healthy}
-      vectordb: {condition: service_healthy}
     healthcheck:
       test: [CMD, node, -e, "fetch('http://127.0.0.1:3080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
@@ -74,6 +70,7 @@ services:
     depends_on: [api]
   mongodb:
     <<: *service
+    profiles: [legacy-databases]
     image: ${MONGO_IMAGE:-mongo@sha256:098862b1339f031900ca66cf8fef799e616d6324fa41b9a263f2ec899552c1ef}
     environment:
       MONGO_INITDB_ROOT_USERNAME: librechat
@@ -88,6 +85,7 @@ services:
       retries: 10
   redis:
     <<: *service
+    profiles: [legacy-databases]
     image: ${REDIS_IMAGE:-redis@sha256:02f2cc4882f8bf87c79a220ac958f58c700bdec0dfb9b9ea61b62fb0e8f1bfcf}
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
@@ -111,6 +109,7 @@ services:
     mem_limit: 1g
   vectordb:
     <<: *service
+    profiles: [legacy-databases]
     image: ${POSTGRES_IMAGE:-pgvector/pgvector@sha256:8809cfffff0082cf260c9ac752f1dd1afc77f6f0a55c4e6411321e78efc3d9a5}
     environment:
       POSTGRES_DB: librechat_rag
@@ -128,14 +127,29 @@ services:
     image: ${RAG_IMAGE:-registry.librechat.ai/danny-avila/librechat-rag-api-dev-lite@sha256:f9f34c8ed6884b0ff9b17387e6174fed737dba29f21622ecb75604d82bc47bf8}
     env_file: [rag.env]
     environment:
-      DB_HOST: vectordb
-      POSTGRES_DB: librechat_rag
-      POSTGRES_USER: librechat
+      DB_HOST: ${POSTGRES_HOST:?Set managed POSTGRES_HOST}
+      POSTGRES_DB: ${POSTGRES_DB:-librechat_rag}
+      POSTGRES_USER: ${POSTGRES_USER:-librechat}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
       RAG_PORT: 8000
     mem_limit: 2g
-    depends_on:
-      vectordb: {condition: service_healthy}
+
+  mongo-tools:
+    image: ${MONGO_IMAGE:-mongo@sha256:098862b1339f031900ca66cf8fef799e616d6324fa41b9a263f2ec899552c1ef}
+    profiles: [maintenance]
+    environment:
+      MONGO_URI: ${MONGO_URI:?Set managed MONGO_URI}
+    entrypoint: []
+  postgres-tools:
+    image: ${POSTGRES_IMAGE:-pgvector/pgvector@sha256:8809cfffff0082cf260c9ac752f1dd1afc77f6f0a55c4e6411321e78efc3d9a5}
+    profiles: [maintenance]
+    environment:
+      PGHOST: ${POSTGRES_HOST:?Set managed POSTGRES_HOST}
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER:-librechat}
+      PGDATABASE: ${POSTGRES_DB:-librechat_rag}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    entrypoint: []
 
 volumes:
   caddy_data:
