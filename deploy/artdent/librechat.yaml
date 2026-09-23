@@ -51,11 +51,11 @@ endpoints:
 fileConfig:
   endpoints:
     agents:
-      fileLimit: 10
+      fileLimit: 100
       fileSizeLimit: 25
       totalSizeLimit: 50
     OpenRouter:
-      fileLimit: 10
+      fileLimit: 100
       fileSizeLimit: 25
       totalSizeLimit: 50
   serverFileSizeLimit: 50
