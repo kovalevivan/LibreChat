@@ -1,0 +1,24 @@
+{
+  "for_all": true,
+  "privileges": [
+    "READ",
+    "WRITE",
+    "BITMAP",
+    "BLOCKING",
+    "CONNECTION",
+    "GEO",
+    "HASH",
+    "HYPERLOGLOG",
+    "FAST",
+    "KEYSPACE",
+    "LIST",
+    "PUBSUB",
+    "SCRIPTING",
+    "SET",
+    "SORTEDSET",
+    "SLOW",
+    "STREAM",
+    "STRING",
+    "TRANSACTION"
+  ]
+}

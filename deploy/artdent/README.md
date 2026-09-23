@@ -192,6 +192,33 @@ with the `vector` extension enabled through Timeweb's `pgvector` extension setti
 Valkey uses AOF with `appendfsync=everysec` and `maxmemory-policy=noeviction`;
 do not use Timeweb's default `allkeys-lru` for queues and coordination state.
 
+### Valkey user privileges and recovery
+
+On 2026-09-23 the app returned 502 because its Valkey user denied `GET` and
+`PING`; the API repeatedly restarted during startup. Timeweb showed the users
+of both Valkey clusters stuck in `granting_privileges`, with `instances: []`.
+Updating privileges or rebooting the cluster did not repair that state.
+
+Create a named instance record through `POST /api/v1/databases/{id}/instances`
+with `{"name":"librechat"}`, then apply `valkey-privileges.json` through
+`PATCH /api/v1/databases/{id}/admins/{admin_id}`. In this deployment, privileges
+were only retained and applied after that instance record existed. Do not pass
+`instance_id` for Valkey: Timeweb rejects it as MySQL/PostgreSQL-only. The live
+records are `536837` (application cluster `4212339`, user `461251`) and `536839`
+(execution cluster `4212341`, user `461253`). Reuse these records rather than
+creating duplicates. Redis connections still use logical database 0; no data
+migration, password change or endpoint change was required.
+
+The payload selects the supported data, connection, scripting, Pub/Sub and
+transaction categories; `DANGEROUS` is not selected. ACL categories overlap,
+so this is not a command-level denylist. Timeweb retains its own administrative
+command restrictions. Wait for user status `created` and verify the returned
+instance privileges instead of treating a successful PATCH response as completion.
+Check `PING`, expiring `SET`/`GET`, Lua, Streams, Pub/Sub and transactions using
+unique short-lived test keys. Then verify public login, a persisted model reply,
+code execution and stable application restart counts. The recovery passed all
+of these checks; both databases remain managed and private.
+
 Local MongoDB, PostgreSQL, and Redis services are retained under the
 `legacy-databases` profile and are stopped in production. Normal `compose up`
 does not start them. Maintenance client containers have the `maintenance` profile
