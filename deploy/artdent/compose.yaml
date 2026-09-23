@@ -1,0 +1,165 @@
+name: artdent-ai
+
+x-service: &service
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  caddy:
+    <<: *service
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL}
+    image: ${CADDY_IMAGE:-caddy@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    mem_limit: 256m
+    depends_on: [api]
+  api:
+    <<: *service
+    image: ${LIBRECHAT_IMAGE:-registry.librechat.ai/danny-avila/librechat@sha256:b07248d86e020c44101170bde2dbb4ab547df30dd223b4aacd6218cc90e8632b}
+    env_file: [app.env]
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3080
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=2048
+      MONGO_URI: ${MONGO_URI:?Set managed MONGO_URI}
+      MEILI_HOST: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?Set MEILI_MASTER_KEY}
+      REDIS_URI: ${REDIS_URI:?Set managed REDIS_URI}
+      USE_REDIS: "true"
+      USE_REDIS_STREAMS: "true"
+      RAG_API_URL: http://rag_api:8000
+      LIBRECHAT_TEMP_CREDENTIALS_PATH: /app/data/.env.temp
+      ADMIN_PANEL_URL: https://admin.artdent-ai.ru
+    volumes:
+      - ./librechat.yaml:/app/librechat.yaml:ro
+      - images:/app/client/public/images
+      - uploads:/app/uploads
+      - app_data:/app/data
+      - skills:/app/skill
+      - logs:/app/api/logs
+    ports: ["127.0.0.1:3080:3080"]
+    mem_limit: 3g
+    pids_limit: 512
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+  admin-panel:
+    <<: *service
+    image: ${ADMIN_IMAGE:-registry.librechat.ai/clickhouse/librechat-admin-panel@sha256:a395465d1daa3c11495810a8c224df86675985d50de42e98e36eeedbd8aecb94}
+    environment:
+      PORT: 3000
+      SESSION_SECRET: ${ADMIN_PANEL_SESSION_SECRET:?Set ADMIN_PANEL_SESSION_SECRET}
+      API_SERVER_URL: http://api:3080
+      VITE_API_BASE_URL: https://artdent-ai.ru
+      SESSION_COOKIE_SECURE: "true"
+    mem_limit: 512m
+    depends_on: [api]
+  mongodb:
+    <<: *service
+    profiles: [legacy-databases]
+    image: ${MONGO_IMAGE:-mongo@sha256:098862b1339f031900ca66cf8fef799e616d6324fa41b9a263f2ec899552c1ef}
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: librechat
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Set MONGO_PASSWORD}
+    command: [mongod, --auth, --wiredTigerCacheSizeGB, "1.5"]
+    volumes: ["mongo_data:/data/db"]
+    mem_limit: 3g
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "quit(db.adminCommand('ping').ok ? 0 : 1)"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+  redis:
+    <<: *service
+    profiles: [legacy-databases]
+    image: ${REDIS_IMAGE:-redis@sha256:02f2cc4882f8bf87c79a220ac958f58c700bdec0dfb9b9ea61b62fb0e8f1bfcf}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    command: [sh, -c, 'exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes --maxmemory 384mb --maxmemory-policy noeviction']
+    volumes: ["redis_data:/data"]
+    mem_limit: 512m
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+  meilisearch:
+    <<: *service
+    image: ${MEILI_IMAGE:-getmeili/meilisearch@sha256:8b57fc3c7f46535ddef3828df1538465ac19d892eb57c9a10da6df0880bd5856}
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?Set MEILI_MASTER_KEY}
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_MAX_INDEXING_MEMORY: 512MiB
+    volumes: ["meili_data:/meili_data"]
+    mem_limit: 1g
+  vectordb:
+    <<: *service
+    profiles: [legacy-databases]
+    image: ${POSTGRES_IMAGE:-pgvector/pgvector@sha256:8809cfffff0082cf260c9ac752f1dd1afc77f6f0a55c4e6411321e78efc3d9a5}
+    environment:
+      POSTGRES_DB: librechat_rag
+      POSTGRES_USER: librechat
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes: ["pg_data:/var/lib/postgresql/data"]
+    mem_limit: 1g
+    healthcheck:
+      test: [CMD, pg_isready, -U, librechat, -d, librechat_rag]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+  rag_api:
+    <<: *service
+    image: ${RAG_IMAGE:-registry.librechat.ai/danny-avila/librechat-rag-api-dev-lite@sha256:f9f34c8ed6884b0ff9b17387e6174fed737dba29f21622ecb75604d82bc47bf8}
+    env_file: [rag.env]
+    environment:
+      DB_HOST: ${POSTGRES_HOST:?Set managed POSTGRES_HOST}
+      POSTGRES_DB: ${POSTGRES_DB:-librechat_rag}
+      POSTGRES_USER: ${POSTGRES_USER:-librechat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      RAG_PORT: 8000
+    mem_limit: 1g
+
+  mongo-tools:
+    image: ${MONGO_IMAGE:-mongo@sha256:098862b1339f031900ca66cf8fef799e616d6324fa41b9a263f2ec899552c1ef}
+    profiles: [maintenance]
+    environment:
+      MONGO_URI: ${MONGO_URI:?Set managed MONGO_URI}
+    entrypoint: []
+  postgres-tools:
+    image: ${POSTGRES_IMAGE:-pgvector/pgvector@sha256:8809cfffff0082cf260c9ac752f1dd1afc77f6f0a55c4e6411321e78efc3d9a5}
+    profiles: [maintenance]
+    environment:
+      PGHOST: ${POSTGRES_HOST:?Set managed POSTGRES_HOST}
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER:-librechat}
+      PGDATABASE: ${POSTGRES_DB:-librechat_rag}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    entrypoint: []
+
+volumes:
+  caddy_data:
+  caddy_config:
+  images:
+  uploads:
+  app_data:
+  skills:
+  logs:
+  mongo_data:
+  redis_data:
+  meili_data:
+  pg_data:

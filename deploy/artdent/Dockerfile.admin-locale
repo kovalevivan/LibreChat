@@ -1,0 +1,25 @@
+ARG ADMIN_BASE=registry.librechat.ai/clickhouse/librechat-admin-panel@sha256:a395465d1daa3c11495810a8c224df86675985d50de42e98e36eeedbd8aecb94
+FROM ${ADMIN_BASE} AS admin-build
+USER root
+WORKDIR /app
+ADD https://codeload.github.com/ClickHouse/librechat-admin-panel/tar.gz/fce9596f823e78f991c7ef60bb97d0ce15d72934 /tmp/admin-source.tar.gz
+RUN echo '88a58326cefe2a3875298fbfa0859d628de238d0f13cb5473bd6bf5beed4b59a  /tmp/admin-source.tar.gz' | sha256sum -c - \
+    && tar -xzf /tmp/admin-source.tar.gz --strip-components=1 -C /app \
+    && bun install --frozen-lockfile
+COPY deploy/artdent/admin-localization/i18n.ts src/locales/i18n.ts
+COPY deploy/artdent/admin-localization/ru.json src/locales/ru/translation.json
+COPY deploy/artdent/admin-localization/prepare.cjs /tmp/prepare-admin.cjs
+COPY client/public/assets/logo.svg src/assets/librechat.svg
+COPY client/public/assets/logo.svg public/librechat-logo.svg
+COPY client/public/assets/logo.svg public/favicon.svg
+COPY client/public/assets/favicon.ico public/favicon.ico
+COPY deploy/artdent/branding/prepare.cjs /tmp/prepare-branding.cjs
+RUN bun /tmp/prepare-branding.cjs admin \
+    && bun /tmp/prepare-admin.cjs \
+    && bun x tsc --noEmit \
+    && NODE_OPTIONS=--max-old-space-size=4096 bun run build
+
+FROM ${ADMIN_BASE}
+COPY --from=admin-build --chown=bun:bun /app/dist /app/dist
+ARG LOCALIZATION_COMMIT
+LABEL ai.artdent.admin-localization.commit=${LOCALIZATION_COMMIT}

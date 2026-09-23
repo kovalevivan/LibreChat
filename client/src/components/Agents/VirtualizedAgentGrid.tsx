@@ -4,6 +4,7 @@ import { Spinner } from '@librechat/client';
 import { PermissionBits } from 'librechat-data-provider';
 import { AutoSizer, List as VirtualList, WindowScroller } from 'react-virtualized';
 import type t from 'librechat-data-provider';
+import type { TranslationKeys } from '~/hooks';
 import { useMarketplaceAgentsInfiniteQuery } from '~/data-provider/Agents';
 import { useAgentCategories, useLocalize } from '~/hooks';
 import { useHasData } from './SmartLoader';
@@ -138,14 +139,16 @@ const VirtualizedAgentGrid: React.FC<VirtualizedAgentGridProps> = ({
   const getCategoryDisplayName = (categoryValue: string) => {
     const categoryData = categories.find((cat) => cat.value === categoryValue);
     if (categoryData) {
-      return categoryData.label;
+      return categoryData.label?.startsWith('com_')
+        ? localize(categoryData.label as TranslationKeys)
+        : categoryData.label;
     }
 
     if (categoryValue === 'promoted') {
       return localize('com_agents_top_picks');
     }
     if (categoryValue === 'all') {
-      return 'All';
+      return localize('com_ui_all');
     }
 
     return categoryValue.charAt(0).toUpperCase() + categoryValue.slice(1);

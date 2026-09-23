@@ -150,9 +150,16 @@ jest.mock('~/hooks', () => ({
     categories: [
       { value: 'productivity', label: 'Productivity' },
       { value: 'development', label: 'Development' },
+      { value: 'general', label: 'com_agents_category_general' },
     ],
   }),
   useLocalize: () => (key: string, params?: LocalizeParams) => {
+    if (key === 'com_ui_all') {
+      return 'все';
+    }
+    if (key === 'com_agents_category_general') {
+      return 'Общие';
+    }
     if (key === 'com_agents_grid_announcement') {
       return `Found ${params?.count || 0} agents in ${params?.category || 'category'}`;
     }
@@ -214,6 +221,16 @@ describe('VirtualizedAgentGrid', () => {
     renderComponent();
 
     expect(screen.getByTestId('virtual-list')).toBeInTheDocument();
+  });
+
+  it('localizes the all-category announcement', () => {
+    renderComponent();
+    expect(screen.getByRole('grid')).toHaveAccessibleName('Found 2 agents in все');
+  });
+
+  it('resolves translation keys received as category labels', () => {
+    renderComponent({ category: 'general' });
+    expect(screen.getByRole('grid')).toHaveAccessibleName('Found 2 agents in Общие');
   });
 
   it('displays agent cards in virtual rows', () => {

@@ -1,0 +1,24 @@
+{
+    email {$ACME_EMAIL}
+}
+
+# Temporary hostname remains available while the newly registered .ru domain delegates.
+artdent-ai.ru, artdent.188-225-73-127.sslip.io {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+    request_body {
+        max_size 50MB
+    }
+    reverse_proxy api:3080
+}
+
+admin.artdent-ai.ru, artdent-admin.188-225-73-127.sslip.io {
+    encode zstd gzip
+    header Strict-Transport-Security "max-age=31536000"
+    reverse_proxy admin-panel:3000
+}
