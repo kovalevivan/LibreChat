@@ -215,7 +215,7 @@ export function HeadHunterPage() {
             type="primary"
             label={localize('com_hh_save')}
             loading={busy && mutation.variables === 'save'}
-            disabled={busy || !canSave || !dirty}
+            disabled={busy || !canSave || (!dirty && !data.needsMigration)}
             onClick={() => mutation.mutate('save')}
           />
         </div>
@@ -223,7 +223,7 @@ export function HeadHunterPage() {
 
       <div className="flex flex-col gap-3 border-t border-(--cui-color-stroke-default) pt-5">
         <p className="text-sm text-(--cui-color-text-muted)">{localize('com_hh_account_help')}</p>
-        {dirty && (
+        {(dirty || data.needsMigration) && (
           <p className="text-sm" role="status">
             {localize('com_hh_save_first')}
           </p>
@@ -232,7 +232,7 @@ export function HeadHunterPage() {
           <Button
             type="primary"
             label={localize(data.connected ? 'com_hh_reconnect' : 'com_hh_authorize')}
-            disabled={busy || !data.configured || dirty}
+            disabled={busy || !data.configured || dirty || data.needsMigration}
             loading={busy && mutation.variables === 'authorize'}
             onClick={() => mutation.mutate('authorize')}
           />

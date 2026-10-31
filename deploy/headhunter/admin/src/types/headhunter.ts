@@ -6,6 +6,7 @@ export interface HeadHunterStatus {
   clientId: string;
   redirectUri: string;
   authorizationPending?: boolean;
+  needsMigration?: boolean;
   account?: { id: string; name: string; employer: { id: string; name: string } };
 }
 
