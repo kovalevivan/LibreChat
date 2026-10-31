@@ -6,6 +6,7 @@ const target = process.cwd();
 assert.ok(source, 'Pass the overlay directory');
 fs.cpSync(path.join(source, 'admin/src'), path.join(target, 'src'), { recursive: true });
 fs.copyFileSync(path.join(source, 'localization/i18n.ts'), 'src/locales/i18n.ts');
+fs.mkdirSync('src/locales/ru', { recursive: true });
 fs.copyFileSync(path.join(source, 'localization/ru.json'), 'src/locales/ru/translation.json');
 for (const language of ['en', 'ru']) {
   const file = `src/locales/${language}/translation.json`;
