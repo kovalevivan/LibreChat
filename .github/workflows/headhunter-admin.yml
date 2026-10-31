@@ -1,0 +1,34 @@
+name: HeadHunter administration
+on:
+  push:
+    paths: ['deploy/headhunter/**', '.github/workflows/headhunter-admin.yml']
+  pull_request:
+    paths: ['deploy/headhunter/**', '.github/workflows/headhunter-admin.yml']
+permissions:
+  contents: read
+jobs:
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Prepare pinned admin panel
+        run: |
+          curl -fsSL https://codeload.github.com/ClickHouse/librechat-admin-panel/tar.gz/fce9596f823e78f991c7ef60bb97d0ce15d72934 -o "$RUNNER_TEMP/admin.tar.gz"
+          echo "88a58326cefe2a3875298fbfa0859d628de238d0f13cb5473bd6bf5beed4b59a  $RUNNER_TEMP/admin.tar.gz" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/admin"
+          tar -xzf "$RUNNER_TEMP/admin.tar.gz" --strip-components=1 -C "$RUNNER_TEMP/admin"
+          cd "$RUNNER_TEMP/admin"
+          node "$GITHUB_WORKSPACE/deploy/headhunter/prepare.cjs" "$GITHUB_WORKSPACE/deploy/headhunter"
+          bun install --frozen-lockfile
+      - name: Build and check types
+        run: |
+          cd "$RUNNER_TEMP/admin"
+          bun run build
+          bun x tsc --noEmit
+          bun x eslint src/components/headhunter/index.tsx src/server/headhunter.ts src/routes/_app/headhunter.tsx src/routes/headhunter-callback.tsx src/types/headhunter.ts
